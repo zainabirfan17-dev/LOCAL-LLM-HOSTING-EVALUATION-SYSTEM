@@ -1,0 +1,3 @@
+﻿timestamp,model,model_file_size,parameter_size,quantization,load_test_type,response_time_seconds,load_duration_seconds,ollama_total_duration_seconds,prompt_eval_count,eval_count,done_reason,status,error
+2026-10-16T15:04:41,gemma3:4b,3.35 GB,4.3B,Q4_K_M,stop_then_first_request,16.0721,12.7634,14.0276,17,4,stop,success,
+2026-10-16T15:57:09,llama3.2:3b,2.02 GB,3.2B,Q4_K_M,stop_then_first_request,12.4992,9.0064,10.4638,32,4,stop,success,

@@ -1,0 +1,5 @@
+﻿model,parameter_size,quantization,model_file_size,cold_load_time_mean_s,trials_recorded,successful,errors,truncated_at_token_limit,response_time_mean_s,response_time_min_s,response_time_max_s,tokens_per_second_mean,ram_mean_mb,ram_peak_mb,ollama_cpu_mean_percent,ollama_cpu_peak_percent,system_cpu_mean_percent,gpu_util_mean_percent,gpu_offload_mean_percent,correctness_mean,relevance_mean,completeness_mean
+,,,,,1,0,1,0,,,,,,,,,,,,,,
+46.17,4559.58,4600.78,55.89,,1,0,1,0,,,,,,,,,,,,,,
+gemma3:4b,4.3B,Q4_K_M,3.35 GB,12.763,30,29,1,5,45.356,7.278,129.48,6.56,5339.14,7898.2,44.092,77.36,55.659,,0,,,
+llama3.2:3b,3.2B,Q4_K_M,2.02 GB,9.006,28,28,0,0,38.582,9.759,379.41,7.555,2617.787,2864.43,42.855,71.24,53.48,,0,,,
