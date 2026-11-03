@@ -37,5 +37,18 @@
     "tokens_per_sec": 9.97,
     "eval_count": 7,
     "stopped": false
+  },
+  {
+    "timestamp": "2026-11-03T20:54:41",
+    "model": "gemma3:4b",
+    "style": "Short answer",
+    "prompt": "how are you?",
+    "response": "I’m doing well, thank you for asking! As a large language model, I don’t experience feelings like humans do. How can I help you today?",
+    "response_time_sec": 23.6898,
+    "first_token_sec": 18.2009,
+    "load_time_sec": 13.072,
+    "tokens_per_sec": 6.39,
+    "eval_count": 35,
+    "stopped": false
   }
 ]

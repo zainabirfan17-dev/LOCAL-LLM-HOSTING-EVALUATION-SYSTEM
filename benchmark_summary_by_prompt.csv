@@ -1,6 +1,6 @@
 ﻿prompt_id,prompt_category,model,trials_recorded,successful,errors,truncated_at_token_limit,response_time_mean_s,response_time_min_s,response_time_max_s,tokens_per_second_mean,ram_mean_mb,ram_peak_mb,ollama_cpu_mean_percent,ollama_cpu_peak_percent,system_cpu_mean_percent,gpu_util_mean_percent,gpu_offload_mean_percent,correctness_mean,relevance_mean,completeness_mean
-,,,1,0,1,0,,,,,,,,,,,,,,
-,2748.3,46.17,1,0,1,0,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,
 P01,Explanation,gemma3:4b,3,3,0,0,64.818,58.898,70.629,6.827,4986.083,5566.09,47.94,60.16,54.45,,0,,,
 P01,Explanation,llama3.2:3b,2,2,0,0,49.793,36.045,63.54,7.055,2684.76,2831.82,47.605,71.24,52.255,,0,,,
 P02,Electrical reasoning,gemma3:4b,3,3,0,0,69.112,38.448,129.48,5.29,4630.357,5295.1,45.887,59.02,57.793,,0,,,

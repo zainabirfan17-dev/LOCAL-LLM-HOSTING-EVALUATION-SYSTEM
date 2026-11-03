@@ -19,6 +19,7 @@ import time
 import tkinter as tk
 import urllib.error
 import urllib.request
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, scrolledtext, ttk
@@ -44,6 +45,7 @@ PS_URL = OLLAMA_URL + "/api/ps"
 REQUEST_TIMEOUT = 600
 MAX_HISTORY = 200
 CONTEXT_MESSAGES = 20
+RESOURCE_HISTORY_LEN=800
 GENERATION_OPTIONS = {"temperature": 0.2, "num_predict": 500}
 DEFAULT_MODELS = ["gemma3:4b", "llama3.2:3b"]
 FONT = "Segoe UI"
@@ -548,6 +550,8 @@ class App:
         self.placeholder_on = False
         self.widgets = []
         self.live_processes = {}
+        self.resource_history = deque(maxlen=RESOURCE_HISTORY_LEN)  # samples for the graphs
+        self.graph_win = None
         self.style = ttk.Style()
         try: self.style.theme_use("clam")
         except tk.TclError: pass
@@ -634,6 +638,7 @@ class App:
             ("View benchmark CSV", self.view_benchmark_csv, "normal"),
             ("Open results folder", self.open_results_folder, "normal"),
             ("Save model info", self.export_model_info, "normal"),
+            ("Resource graphs", self.show_resource_graphs, "accent"),
         ])
 
         chat_frame = tk.Frame(r)
@@ -1171,6 +1176,16 @@ class App:
             ollama_cpu = cpu_total / logical_cpus
             ollama_ram_mb = ram_total / (1024 * 1024)
             runtime_text = "Ollama process detected" if active else "No Ollama process detected yet"
+            self.resource_history.append({
+                "time": datetime.now(),
+                "system_cpu": system_cpu,
+                "system_ram": memory.percent,
+                "ollama_cpu": ollama_cpu,
+                "ollama_ram_mb": ollama_ram_mb,
+                "ollama_ram_pct": ram_total / memory.total * 100,
+                "generating": self.busy,
+            })
+            self.redraw_graphs()
             self.live_resources.configure(
                 text=(f"LIVE RESOURCES  |  System CPU: {system_cpu:.1f}%  |  "
                       f"System RAM: {memory.percent:.1f}% used ({memory.used / (1024**3):.1f}/"
@@ -1181,6 +1196,125 @@ class App:
         except Exception as exc:
             self.live_resources.configure(text=f"Live resource monitor error: {exc}")
         self.root.after(1500, self.update_live_resources)
+    
+    # ------------------------------------------------------------------
+    # Resource-usage graphs (bonus extension)
+    # ------------------------------------------------------------------
+    def show_resource_graphs(self):
+        """Open (or bring to the front) the live CPU / RAM graph window."""
+        if not psutil:
+            messagebox.showinfo("Resource graphs", "Install psutil first:\n\npython -m pip install psutil", parent=self.root)
+            return
+        if self.graph_win is not None and self.graph_win.winfo_exists():
+            self.graph_win.lift()
+            return
+        win = tk.Toplevel(self.root)
+        win.title("Resource usage graphs")
+        win.geometry("900x620")
+        win.configure(bg=self.P["bg"])
+        win.protocol("WM_DELETE_WINDOW", self.close_graphs)
+        self.graph_win = win
+        self.cpu_canvas = tk.Canvas(win, bg=self.P["panel"], highlightthickness=1, highlightbackground=self.P["border"])
+        self.cpu_canvas.pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        self.ram_canvas = tk.Canvas(win, bg=self.P["panel"], highlightthickness=1, highlightbackground=self.P["border"])
+        self.ram_canvas.pack(fill="both", expand=True, padx=10, pady=(5, 5))
+        for canvas in (self.cpu_canvas, self.ram_canvas):
+            canvas.bind("<Configure>", lambda _e: self.redraw_graphs())
+        bar = tk.Frame(win, bg=self.P["bg"])
+        bar.pack(fill="x", padx=10, pady=(0, 10))
+        tk.Label(bar, text="Shaded area = a response or benchmark was running", bg=self.P["bg"], fg=self.P["muted"], font=(FONT, 9)).pack(side="left")
+        ttk.Button(bar, text="Close", command=self.close_graphs).pack(side="right")
+        ttk.Button(bar, text="Export samples to CSV", command=self.export_resource_samples).pack(side="right", padx=6)
+        ttk.Button(bar, text="Clear graph", command=self.clear_graphs).pack(side="right")
+        self.redraw_graphs()
+
+    def close_graphs(self):
+        if self.graph_win is not None:
+            self.graph_win.destroy()
+        self.graph_win = None
+
+    def clear_graphs(self):
+        self.resource_history.clear()
+        self.redraw_graphs()
+
+    def redraw_graphs(self):
+        """Redraw both charts from the stored samples (called after every new sample)."""
+        win = self.graph_win
+        if win is None or not win.winfo_exists():
+            return
+        samples = list(self.resource_history)
+        last = samples[-1] if samples else None
+        sys_color, ollama_color = self.P["accent"], "#f59e0b"
+        cpu_legend = [(sys_color, f"System CPU {last['system_cpu']:.1f}%"),
+                      (ollama_color, f"Ollama CPU {last['ollama_cpu']:.1f}%")] if last else []
+        ram_legend = [(sys_color, f"System RAM {last['system_ram']:.1f}%"),
+                      (ollama_color, f"Ollama RAM {last['ollama_ram_mb']:.0f} MB ({last['ollama_ram_pct']:.1f}%)")] if last else []
+        self.draw_chart(self.cpu_canvas, samples, "CPU usage (%)", cpu_legend,
+                        [("system_cpu", sys_color), ("ollama_cpu", ollama_color)])
+        self.draw_chart(self.ram_canvas, samples, "RAM usage (% of installed RAM)", ram_legend,
+                        [("system_ram", sys_color), ("ollama_ram_pct", ollama_color)])
+
+    def draw_chart(self, canvas, samples, title, legend, lines):
+        """Draw a simple 0-100 % line chart on a Tk canvas (no extra libraries needed)."""
+        P = self.P
+        canvas.delete("all")
+        canvas.configure(bg=P["panel"], highlightbackground=P["border"])
+        w, h = canvas.winfo_width(), canvas.winfo_height()
+        if w < 200 or h < 100:
+            return
+        left, right, top, bottom = 48, 16, 34, 26
+        plot_w, plot_h = w - left - right, h - top - bottom
+        canvas.create_text(left, 14, text=title, anchor="w", fill=P["text"], font=(FONT, 10, "bold"))
+        x = w - right
+        for color, text in reversed(legend):  # legend sits at the top right
+            item = canvas.create_text(x, 14, text=text, anchor="e", fill=color, font=(FONT, 9, "bold"))
+            x = canvas.bbox(item)[0] - 18
+        for pct in (0, 25, 50, 75, 100):  # horizontal grid lines and y-axis labels
+            y = top + plot_h * (1 - pct / 100)
+            canvas.create_line(left, y, left + plot_w, y, fill=P["border"])
+            canvas.create_text(left - 6, y, text=str(pct), anchor="e", fill=P["muted"], font=(FONT, 8))
+        if len(samples) < 2:
+            canvas.create_text(left + plot_w / 2, top + plot_h / 2, text="Collecting samples…", fill=P["muted"], font=(FONT, 10))
+            return
+        last_index = len(samples) - 1
+        x_of = lambda i: left + plot_w * i / last_index
+        y_of = lambda value: top + plot_h * (1 - min(100.0, max(0.0, value)) / 100)
+        start = None  # shade the periods when the model was generating
+        for i, sample in enumerate(samples + [None]):
+            on = sample is not None and sample["generating"]
+            if on and start is None:
+                start = i
+            elif not on and start is not None:
+                canvas.create_rectangle(x_of(start), top, max(x_of(i - 1), x_of(start) + 3), top + plot_h,
+                                        fill=P["muted"], outline="", stipple="gray25")
+                start = None
+        for key, color in lines:
+            points = []
+            for i, sample in enumerate(samples):
+                points += [x_of(i), y_of(sample[key])]
+            canvas.create_line(*points, fill=color, width=2)
+        canvas.create_text(left, h - 12, text=samples[0]["time"].strftime("%H:%M:%S"), anchor="w", fill=P["muted"], font=(FONT, 8))
+        canvas.create_text(left + plot_w, h - 12, text=samples[-1]["time"].strftime("%H:%M:%S"), anchor="e", fill=P["muted"], font=(FONT, 8))
+
+    def export_resource_samples(self):
+        """Save the samples behind the graphs to a timestamped CSV in the project folder."""
+        if not self.resource_history:
+            messagebox.showinfo("Export", "No samples collected yet.", parent=self.graph_win)
+            return
+        path = BASE_DIR / f"resource_samples_{datetime.now():%Y%m%d_%H%M%S}.csv"
+        try:
+            with path.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(["timestamp", "system_cpu_percent", "system_ram_percent",
+                                 "ollama_cpu_percent", "ollama_ram_mb", "generating"])
+                for s in self.resource_history:
+                    writer.writerow([s["time"].strftime("%Y-%m-%d %H:%M:%S"), round(s["system_cpu"], 1),
+                                     round(s["system_ram"], 1), round(s["ollama_cpu"], 1),
+                                     round(s["ollama_ram_mb"]), int(s["generating"])])
+        except OSError as exc:
+            messagebox.showerror("Export failed", f"Could not write the file:\n{path}\n\n{exc}", parent=self.graph_win)
+            return
+        messagebox.showinfo("Exported", f"Saved {len(self.resource_history)} samples to:\n{path}", parent=self.graph_win)
 
     def animate(self):
         if self.busy:
