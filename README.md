@@ -135,7 +135,7 @@ The application maintains separate files for its operational history, benchmark 
 
 | File | Purpose |
 |---|---|
-| `main.py` | Main Python application and entry point |
+| `local_llm_app.py` | Main Python application and entry point |
 | `history.json` | Saved application history |
 | `benchmark_results.csv` | Detailed benchmark records |
 | `load_model_tests.csv` | Records associated with model-loading tests |
@@ -180,7 +180,7 @@ Verify that Ollama is available:
 ollama --version
 ```
 
-### 3. Download the models
+### 3. Download the Models
 
 Run the following commands in a terminal:
 
@@ -189,9 +189,15 @@ ollama pull gemma3:4b
 ollama pull llama3.2:3b
 ```
 
-These commands download the model files needed for local execution. They can require several gigabytes of storage.
+These commands download the model files required for local execution. They may require several gigabytes of storage.
 
-### 4. Install Python dependencies
+To verify that the models have been downloaded, run:
+
+```bash
+ollama list
+```
+
+### 4. Install Python Dependencies
 
 Open a terminal in the project directory and install the required package:
 
@@ -215,17 +221,17 @@ Ensure that Ollama is running before launching the application. On installations
 ollama serve
 ```
 
-If the service is already running, you do not need to start a second instance.
+If the service is already running, you do not need to start another instance.
 
-### 6. Run the application
+### 6. Run the Application
 
-Navigate to the directory containing `main.py` and execute:
+Open a terminal in the directory containing `local_llm_app.py` and execute:
 
 ```bash
-python main.py
+python local_llm_app.py
 ```
 
-The desktop application should open, allowing you to interact with the configured models and use the available testing and benchmarking functionality.
+The desktop application should open, allowing users to interact with the configured local models and access the available testing and benchmarking functionality.
 
 ## Privacy and Local Execution
 
