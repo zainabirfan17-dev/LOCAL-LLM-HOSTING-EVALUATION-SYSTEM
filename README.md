@@ -268,6 +268,7 @@ Potential extensions include:
 **Institution:** NED University of Engineering and Technology  
 **Project:** P16 — Local LLM Hosting and Evaluation System
 
+**Group Members:** Zainab Irfan(07) , Samia Athar (08) , Wania (09)
 This project demonstrates practical integration of Python, local AI inference, graphical user interfaces, API communication, data logging, and experimental evaluation.
 
 
